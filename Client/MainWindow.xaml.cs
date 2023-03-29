@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,10 +21,22 @@ public partial class MainWindow : Window
 {
     private bool xTurn = true;
     private int[,] board = new int[3, 3];
-
+    private TcpClient client;
+    private NetworkStream stream;
+    Button[,] buttons;
     public MainWindow()
     {
         InitializeComponent();
+        buttons = new Button[3, 3] {
+        { button00, button01, button02 },
+        { button10, button11, button12 },
+        { button20, button21, button22 }
+    };
+
+        client = new TcpClient("localhost", 1234);
+        stream = client.GetStream();
+
+        Task.Run(ReceiveUpdates);
     }
 
     private void Button_Click(object sender, RoutedEventArgs e)
@@ -46,6 +60,80 @@ public partial class MainWindow : Window
         xTurn = !xTurn;
 
         CheckForWinner();
+        byte[] data = Encoding.ASCII.GetBytes(GetGameState());
+        stream.Write(data, 0, data.Length);
+    }
+
+    private void ReceiveUpdates()
+    {
+        byte[] data = new byte[1024];
+        string receivedData;
+
+        while (true)
+        {
+            int bytesRead = stream.Read(data, 0, data.Length);
+            receivedData = Encoding.ASCII.GetString(data, 0, bytesRead);
+
+            UpdateGameState(receivedData);
+        }
+    }
+
+    private string GetGameState()
+    {
+        string gameState = "";
+
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                gameState += board[i, j];
+            }
+        }
+
+        return gameState;
+    }
+
+    private void UpdateGameState(string gameState)
+    {
+        int index = 0;
+
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                int value = int.Parse(gameState[index].ToString());
+                board[i, j] = value;
+
+                if (value == 1)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        buttons[i, j].Content = "X";
+                        buttons[i, j].IsEnabled = false;
+                    });
+                }
+                else if (value == 2)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        buttons[i, j].Content = "O";
+                        buttons[i, j].IsEnabled = false;
+                    });
+                }
+                else
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        buttons[i, j].Content = "";
+                        buttons[i, j].IsEnabled = true;
+                    });
+                }
+
+                index++;
+            }
+        }
+
+        xTurn = !xTurn;
     }
 
     private void CheckForWinner()
@@ -60,7 +148,7 @@ public partial class MainWindow : Window
             }
         }
 
-        
+
         for (int i = 0; i < 3; i++)
         {
             if (board[0, i] != 0 && board[0, i] == board[1, i] && board[1, i] == board[2, i])
@@ -70,7 +158,7 @@ public partial class MainWindow : Window
             }
         }
 
-        
+
         if (board[0, 0] != 0 && board[0, 0] == board[1, 1] && board[1, 1] == board[2, 2])
         {
             ShowWinner(board[0, 0]);
