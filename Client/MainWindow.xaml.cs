@@ -23,15 +23,16 @@ public partial class MainWindow : Window
     private int[,] board = new int[3, 3];
     private TcpClient client;
     private NetworkStream stream;
-    Button[,] buttons;
+    private Button[,] buttons;
     public MainWindow()
     {
         InitializeComponent();
-        buttons = new Button[3, 3] {
-        { button00, button01, button02 },
-        { button10, button11, button12 },
-        { button20, button21, button22 }
-    };
+        buttons = new Button[3, 3]
+        {
+          { button00, button01, button02 },
+          { button10, button11, button12 },
+          { button20, button21, button22 }
+        };
 
         client = new TcpClient("localhost", 1234);
         stream = client.GetStream();
