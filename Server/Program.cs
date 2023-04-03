@@ -11,7 +11,9 @@ using System.Threading;
 //TcpListener listener = new TcpListener(ipAddress, port);
 //Dictionary<int, TcpClient> clients = new Dictionary<int, TcpClient>();
 //Dictionary<int, NetworkStream> streams = new Dictionary<int, NetworkStream>();
+//Dictionary<int, int> groups = new Dictionary<int, int>();
 //int nextClientId = 1;
+//int nextGroupId = 1;
 
 //Console.WriteLine("Starting server on " + ipAddress + ":" + port);
 //listener.Start();
@@ -28,6 +30,25 @@ using System.Threading;
 
 //    Console.WriteLine("Client connected with ID " + clientId);
 
+
+//    int groupId = -1;
+//    foreach (int otherClientId in clients.Keys)
+//    {
+//        if (otherClientId != clientId && !groups.ContainsKey(otherClientId))
+//        {
+//            groupId = nextGroupId++;
+//            groups.Add(clientId, groupId);
+//            groups.Add(otherClientId, groupId);
+//            Console.WriteLine("Group " + groupId + " created with clients " + clientId + " and " + otherClientId);
+//            break;
+//        }
+//    }
+
+//    if (groupId == -1)
+//    {
+//        Console.WriteLine("Waiting for another client to form a group...");
+//    }
+
 //    Task.Run(() =>
 //    {
 //        byte[] data = new byte[1024];
@@ -40,9 +61,10 @@ using System.Threading;
 //                int bytesRead = streams[clientId].Read(data, 0, data.Length);
 //                receivedData = Encoding.ASCII.GetString(data, 0, bytesRead);
 
+
 //                foreach (int otherClientId in clients.Keys)
 //                {
-//                    if (otherClientId != clientId)
+//                    if (otherClientId != clientId && groups.ContainsKey(otherClientId) && groups[otherClientId] == groups[clientId])
 //                    {
 //                        byte[] sendData = Encoding.ASCII.GetBytes(receivedData);
 //                        streams[otherClientId].Write(sendData, 0, sendData.Length);
@@ -52,6 +74,38 @@ using System.Threading;
 //            catch
 //            {
 //                Console.WriteLine("Client with ID " + clientId + " disconnected.");
+
+
+//                if (groups.ContainsKey(clientId))
+//                {
+//                    int groupId = groups[clientId];
+//                    groups.Remove(clientId);
+
+
+//                    bool groupEmpty = true;
+//                    foreach (int otherClientId in groups.Keys)
+//                    {
+//                        if (groups[otherClientId] == groupId)
+//                        {
+//                            groupEmpty = false;
+//                            break;
+//                        }
+//                    }
+
+//                    if (groupEmpty)
+//                    {
+//                        Console.WriteLine("Group " + groupId + " is now empty and has been removed.");
+//                        foreach (int otherClientId in groups.Keys.ToList())
+//                        {
+//                            if (groups[otherClientId] > groupId)
+//                            {
+//                                groups[otherClientId]--;
+//                            }
+//                        }
+//                        nextGroupId--;
+//                    }
+//                }
+
 //                clients.Remove(clientId);
 //                streams.Remove(clientId);
 //                return;
@@ -59,6 +113,7 @@ using System.Threading;
 //        }
 //    });
 //}
+
 IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
 int port = 1234;
 
@@ -84,7 +139,7 @@ while (true)
 
     Console.WriteLine("Client connected with ID " + clientId);
 
-    // Add the client to a group
+
     int groupId = -1;
     foreach (int otherClientId in clients.Keys)
     {
@@ -105,23 +160,19 @@ while (true)
 
     Task.Run(() =>
     {
-        byte[] data = new byte[1024];
-        string receivedData;
-
+        BinaryReader reader = new BinaryReader(streams[clientId]);
         while (true)
         {
             try
             {
-                int bytesRead = streams[clientId].Read(data, 0, data.Length);
-                receivedData = Encoding.ASCII.GetString(data, 0, bytesRead);
+                string receivedData = reader.ReadString();
 
-                // Send data only to clients in the same group
                 foreach (int otherClientId in clients.Keys)
                 {
                     if (otherClientId != clientId && groups.ContainsKey(otherClientId) && groups[otherClientId] == groups[clientId])
                     {
-                        byte[] sendData = Encoding.ASCII.GetBytes(receivedData);
-                        streams[otherClientId].Write(sendData, 0, sendData.Length);
+                        BinaryWriter writer = new BinaryWriter(streams[otherClientId]);
+                        writer.Write(receivedData);
                     }
                 }
             }
@@ -129,13 +180,13 @@ while (true)
             {
                 Console.WriteLine("Client with ID " + clientId + " disconnected.");
 
-                // Remove the client from the group
+
                 if (groups.ContainsKey(clientId))
                 {
                     int groupId = groups[clientId];
                     groups.Remove(clientId);
 
-                    // If the group is now empty, remove it
+
                     bool groupEmpty = true;
                     foreach (int otherClientId in groups.Keys)
                     {

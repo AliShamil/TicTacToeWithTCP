@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -24,6 +25,8 @@ public partial class MainWindow : Window
     private TcpClient client;
     private NetworkStream stream;
     private Button[,] buttons;
+    private BinaryReader reader;
+    private BinaryWriter writer;
     public MainWindow()
     {
         InitializeComponent();
@@ -36,12 +39,15 @@ public partial class MainWindow : Window
 
         client = new TcpClient("localhost", 1234);
         stream = client.GetStream();
+        reader = new BinaryReader(stream);
+        writer = new BinaryWriter(stream);
 
         Task.Run(ReceiveUpdates);
     }
 
     private void Button_Click(object sender, RoutedEventArgs e)
     {
+        CheckForWinner();
         Button button = (Button)sender;
         int row = Grid.GetRow(button);
         int column = Grid.GetColumn(button);
@@ -60,21 +66,14 @@ public partial class MainWindow : Window
         button.IsEnabled = false;
         xTurn = !xTurn;
 
-        CheckForWinner();
-        byte[] data = Encoding.ASCII.GetBytes(GetGameState());
-        stream.Write(data, 0, data.Length);
+        writer.Write(GetGameState());
     }
 
     private void ReceiveUpdates()
     {
-        byte[] data = new byte[1024];
-        string receivedData;
-
         while (true)
         {
-            int bytesRead = stream.Read(data, 0, data.Length);
-            receivedData = Encoding.ASCII.GetString(data, 0, bytesRead);
-
+            string receivedData = reader.ReadString();
             UpdateGameState(receivedData);
         }
     }
