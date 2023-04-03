@@ -1,32 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Client;
 
 public partial class MainWindow : Window
 {
-    private bool xTurn = true;
+    private bool xTurn;
     private int[,] board = new int[3, 3];
     private TcpClient client;
     private NetworkStream stream;
     private Button[,] buttons;
     private BinaryReader reader;
     private BinaryWriter writer;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -42,12 +33,12 @@ public partial class MainWindow : Window
         reader = new BinaryReader(stream);
         writer = new BinaryWriter(stream);
 
+        xTurn = reader.ReadBoolean();
         Task.Run(ReceiveUpdates);
     }
 
     private void Button_Click(object sender, RoutedEventArgs e)
     {
-        CheckForWinner();
         Button button = (Button)sender;
         int row = Grid.GetRow(button);
         int column = Grid.GetColumn(button);
@@ -64,15 +55,18 @@ public partial class MainWindow : Window
         }
 
         button.IsEnabled = false;
-        xTurn = !xTurn;
 
+        CheckForWinner();
         writer.Write(GetGameState());
+        grid.IsEnabled = false;
     }
 
     private void ReceiveUpdates()
     {
+        
         while (true)
         {
+            Dispatcher.Invoke(() => { grid.IsEnabled = true; });
             string receivedData = reader.ReadString();
             UpdateGameState(receivedData);
         }
@@ -132,8 +126,6 @@ public partial class MainWindow : Window
                 index++;
             }
         }
-
-        xTurn = !xTurn;
     }
 
     private void CheckForWinner()
@@ -210,7 +202,6 @@ public partial class MainWindow : Window
     private void ResetGame()
     {
         board = new int[3, 3];
-        xTurn = true;
 
         foreach (var element in grid.Children)
         {
@@ -219,6 +210,6 @@ public partial class MainWindow : Window
                 button.Content = "";
                 button.IsEnabled = true;
             }
-        }
+        } 
     }
 }
