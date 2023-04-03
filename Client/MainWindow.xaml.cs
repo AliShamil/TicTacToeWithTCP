@@ -75,7 +75,7 @@ public partial class MainWindow : Window
 
     private void ReceiveUpdates()
     {
-        
+
         while (true)
         {
             Dispatcher.Invoke(() => { grid.IsEnabled = true; });
@@ -222,6 +222,6 @@ public partial class MainWindow : Window
                 button.Content = "";
                 button.IsEnabled = true;
             }
-        } 
+        }
     }
 }

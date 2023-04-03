@@ -5,7 +5,7 @@ IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
 int port = 1234;
 
 TcpListener listener = new TcpListener(ipAddress, port);
-Dictionary<int, TcpClient> _clients = new Dictionary<int, TcpClient>();
+Dictionary<int, TcpClient> clients = new Dictionary<int, TcpClient>();
 Dictionary<int, NetworkStream> streams = new Dictionary<int, NetworkStream>();
 Dictionary<int, int> groups = new Dictionary<int, int>();
 
@@ -56,9 +56,9 @@ while (true)
         while (true)
         {
             try
-            {   
+            {
                 var receivedData = reader.ReadString();
-                
+
 
                 foreach (int otherClientId in clients.Keys)
                 {
