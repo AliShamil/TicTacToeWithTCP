@@ -11,7 +11,7 @@ namespace Client;
 public partial class MainWindow : Window
 {
     private bool xTurn;
-    private int[,] board = new int[3, 3];
+    private int[,] board;
     private TcpClient client;
     private NetworkStream stream;
     private Button[,] buttons;
@@ -21,6 +21,14 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Initialize();
+
+        Task.Run(ReceiveUpdates);
+    }
+
+    private void Initialize()
+    {
+        board = new int[3, 3];
         buttons = new Button[3, 3]
         {
           { button00, button01, button02 },
@@ -34,7 +42,11 @@ public partial class MainWindow : Window
         writer = new BinaryWriter(stream);
 
         xTurn = reader.ReadBoolean();
-        Task.Run(ReceiveUpdates);
+
+        if (xTurn)
+            Title = "Player X";
+        else
+            Title = "Player O";
     }
 
     private void Button_Click(object sender, RoutedEventArgs e)
